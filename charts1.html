@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="format-detection" content="telephone=no">
+    <title>体温曲线图</title>
+    <script src="http://s1.bdstatic.com/r/www/cache/ecom/esl/1-6-10/esl.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #f5f5f5;
+            color: #030000;
+            font-family: "Microsoft yahei";
+        }
+
+        .wrapper {
+            margin: 0 auto;
+            font-size: 14px;
+            background: #fff;
+            max-width: 640px;
+            width: 100%;
+            height: 250px;
+            /* border:solid 1px #bcbcbc;*/
+            /*border-radius:3px;*/
+        }
+        #main {height: 250px; text-align: center;line-height:250px;
+        }
+     
+    </style>
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <div id="main">加载中…</div>
+    </div>
+    <script type="text/javascript">
+        // 路径配置
+        require.config({
+            paths: {
+                'echarts': 'http://echarts.baidu.com/build/echarts'
+            }
+        });
+
+
+        //数据配置
+        //心率1 血糖2  血压3 
+        var xl = xt = xy = mb = sm = yd = null;
+        //心率
+        xl = {
+
+            type: 1,//类型代号
+            min: "2",//y轴最小值
+            max: "33",//y轴最大值
+            lineColor: "#de1a85",//曲线颜色
+            tit: "心率",//标题
+            unit: "次",//单位
+            x: 40//x轴左边距
+        };
+        //血糖
+        xt = {
+
+            type: 2,//血糖
+            min: "30",//y轴最小值
+            max: "210",
+            lineColor: "#21c0e3",
+            tit: "血糖",//标题
+            unit: "mmol/L",//单位
+            x: 40,//x轴左边距
+            warning:130//警告值
+        };
+        //血压
+        xy = {
+
+            type: 3,//血压
+            min: "0",//y轴最小值
+            max: "200",
+            lineColor: "#c664bc",
+            tit: "血压",//标题
+            unit: "mmHg",//单位
+            x: 40,//x轴左边距
+            warning: 150//高压警告值
+        };
+       
+
+        var Util = function (obj) {
+
+            if (obj == null) {
+                document.getElementById('main').innerHTML = "无数据";
+                return;
+            }
+            this.init(obj);
+
+        };
+
+
+
+        //加载图表
+        Util.prototype.init = function (obj) {
+
+
+            //标题
+            // document.getElementById('tit').innerHTML=obj.tit;
+            //x轴数据
+            var x_data = this.getJonData(obj).x_data;
+            //y轴数据
+
+            var y_data = null;
+
+            if (obj.type != 3) {
+                y_data = [{
+                    name: obj.tit,
+                    type: (obj.type == 2 ? 'bar' : 'line'),
+                    symbol: 'emptyCircle',
+                    symbolSize: 4,
+                    barWidth: 7,
+                    //itemStyle: {normal: {areaStyle: {type: 'default'}}},
+                    itemStyle: {
+                        normal: {
+
+                             color: obj.lineColor,
+                             lineStyle: {
+                                 width: 1,
+                              }
+                            //label: {
+                            //    show: true,
+                            //    symbolSize:20, symbol: 'Circle',
+                            //    position: 'top',
+                            //    //formatter: '{b}\n{c}'
+                            //}
+                        }
+                      
+                    },
+                    data: this.getJonData(obj).y_data,
+      
+                    markPoint: {
+                        data: (obj.type==2 ? this.getJonData(obj).markPoint :[
+                                         { type: 'max', name: '高了哦', symbol: 'Circle', symbolSize: 5 } ]),
+                                    
+                        effect:{
+                                  show: (obj.type==2 ? false : true),
+                                 type: 'scale',
+                                 loop: true,
+                                 period: 15,
+                                 scaleSize : 1.5,
+                                 bounceDistance: 10,
+                                 color : obj.lineColor,
+                                 shadowColor : null,
+                                 shadowBlur : 0
+                                                         }
+                    }
+                  
+                }];
+            } else {
+
+                y_data = [{
+                    name: "高压",
+                    type: 'line',
+                    symbol: 'none',
+                    itemStyle: {
+
+                        normal: {
+                            // color: "#f00",
+                            lineStyle: {
+                                color: "#00ffeb",
+                                width: 2,
+                                type: 'solid'
+                            },
+                            areaStyle: { color: 'rgba(233, 255, 253, 0.5)' }
+                        }
+                    },
+                    markPoint: {
+                        data: this.getJonData(obj).markPoint
+                    },
+
+                    data: this.getJonData(obj).xy_highdata
+                },
+
+            {
+                name: "低压",
+                type: 'line',
+                symbol: 'none',
+                itemStyle: {
+                    normal: {
+                        lineStyle: {
+                            color: "#00d3ff",
+                            width: 3,
+                            type: 'solid'
+                        },
+                        areaStyle: { color: 'rgba(233, 247, 254, 0.6)' }
+                    }
+                },
+                data: this.getJonData(obj).xy_lowdata
+            }
+
+
+                ];
+
+
+            }
+
+            if ((x_data == null || x_data.length <= 0) || (y_data == null || y_data.length <= 0)) {
+                document.getElementById('main').innerHTML = "无数据";
+                return;
+            }
+
+
+
+            // require图表模块
+            require(
+                [
+                    'echarts',
+
+                    'echarts/chart/line', //加载line
+                    'echarts/chart/bar' //加载line
+                ],
+                function (ec, theme) {
+                   
+                    myChart = ec.init(document.getElementById('main'), theme);
+                    myChart.setOption({
+                                        tooltip: {
+                             trigger: 'axis',
+                             axisPointer: {
+                                 type: 'none'
+                             },
+                             showDelay: 0
+                         },
+                        grid: {
+                            x2: 10,
+                            y2: 30,
+                            x: obj.x,
+                            y: 25,
+                            borderWidth: 0
+                            //borderColor: '#ccc'
+                        },
+                        xAxis: [{
+                            type: 'category',
+                            boundaryGap: (obj.type == 3 ? false : true),
+                            axisLabel: {
+                                show: true,
+                                textStyle: {
+                                    color: '#979797'
+                                }
+                            },
+                            data: x_data,
+                            // axisLine: {
+                            //     lineStyle: {
+                            //         color: obj.lineColor,
+                            //         width: 2,
+                            //         type: 'solid'
+                            //     }
+                            // },
+                            axisTick: {
+                                show: false
+                            },
+                            scale: false,
+                            // splitLine: {
+                            //     lineStyle: {
+                            //         color: '#e3e2e2',
+                            //         width: 1,
+                            //         type: 'dotted'
+                            //     }
+                            // },
+                            axisLine: { show: false },
+                            splitLine: { show: false }
+                        }],
+                        yAxis: [{
+                            type: 'value',
+
+                            // axisLabel: {
+                            //     interval: 0,
+                            //     formatter: function(v) {
+                            //         return v + obj.unit
+                            //     }
+                            // },
+                            axisLabel: {
+                                show: true,
+                                textStyle: {
+                                    color: '#979797'
+                                }
+                            },
+                            min: obj.min,//最小值
+                            max: obj.max,//最大值                 
+                            splitNumber: 8,
+                            axisLine: { show: false }
+
+                        }],
+
+                        series: y_data
+
+                    });
+                    //myChart.hideLoading();
+                }
+                  
+            );
+          
+
+        };
+        //获取接口数据
+        Util.prototype.getJonData = function (obj) {
+
+            //obj.type==3判断是否取血压数据
+            //除血压类型以外的json数据
+            var jsondata = [
+                       { "date": "24", "val": 14 },
+                       { "date": "25", "val": 18 },
+                       { "date": "26", "val": 22 },
+                       { "date": "27", "val": 19 },
+                      { "date": "28", "val": 22 },
+                      { "date": "29", "val": 27 },
+                       { "date": "30", "val": 22 }
+            ];
+            if (obj.type == 2) {
+
+                jsondata = [
+              { "date": "24", "val": 145 },
+              { "date": "25", "val": 180 },
+              { "date": "26", "val": 120 },
+              { "date": "27", "val": 130 },
+             { "date": "28", "val": 110 },
+             { "date": "29", "val": 100 },
+              { "date": "30", "val": 105 }
+                ];
+            }
+            //血压json数据
+            var xy_jsondata = [
+              { "date": "24", "low": 90, "high": 130 },
+              { "date": "25", "low": 110, "high": 150 },
+              { "date": "26", "low": 120, "high": 140 },
+              { "date": "27", "low": 110, "high": 170 },
+              { "date": "28", "low": 100, "high": 150 },
+               { "date": "29", "low": 110, "high": 180 },
+              { "date": "30", "low": 100, "high": 150 }
+            ];
+            var tempdata = { x_data: [], y_data: [], xy_lowdata: [], xy_highdata: [],markPoint:[] };
+            if (obj.type != 3) {
+                var k=0;
+                for (var i in jsondata)
+                {
+                    tempdata.x_data.push(jsondata[i].date);
+                    tempdata.y_data.push(jsondata[i].val);
+                    var color = "#25e7d9";
+                    if (obj.type == 2 && jsondata[i].val >= obj.warning) {
+                        color = '#e82626'
+                        
+                    }
+                    tempdata.markPoint.push({ xAxis: k, yAxis: jsondata[i].val, symbolSize: 5, symbol: 'Circle', itemStyle: { normal: { color: color, label: { position: 'top' } } } });
+
+                   
+                    k++
+                }
+                tempdata.markPoint.push({
+                    type: 'max', name: '要注意啊', symbol: 'emptyCircle', symbolSize: 5, itemStyle: {
+                        normal: {
+                            color: '#e82626', label: {
+                                position: 'top',
+
+                                formatter: function (v) {
+                                    return "要注意啊"
+                                }
+                            }
+                        }
+                    }
+                });
+            } else
+            {
+                var j = 0;
+                for (var i in xy_jsondata) {
+                    tempdata.x_data.push(xy_jsondata[i].date); tempdata.xy_lowdata.push(xy_jsondata[i].low); tempdata.xy_highdata.push(xy_jsondata[i].high);
+
+                    if (xy_jsondata[i].high >= obj.warning) {
+                        tempdata.markPoint.push({
+                            xAxis: j, yAxis: xy_jsondata[i].high,  symbolSize: 3, symbol: 'Circle', itemStyle: {
+                                normal: {
+                                    color: '#e82626', label: {
+                                        position: 'top'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                  
+                    j++;
+
+                }
+                tempdata.markPoint.push({
+                    type: 'max', name: '高了喔', symbol: 'emptyCircle', symbolSize: 3, itemStyle: {
+                        normal: {
+                            color: '#e82626', label: {
+                                position: 'top',
+
+                                formatter: function (v) {
+                                    return "高了喔"
+                                }
+                            }
+                        }
+                    }
+                });
+            } return tempdata;
+
+
+        }
+
+
+
+        //获取页面参数
+        var request = {
+            QueryString: function (val) {
+                var uri = window.location.search;
+                var re = new RegExp("" + val + "=([^&?]*)", "ig");
+                return ((uri.match(re)) ? (uri.match(re)[0].substr(val.length + 1)) : null);
+            }
+        }
+        var t = request.QueryString("type");
+        if (t != null) {
+            var type = request.QueryString("type");
+            switch (type) {
+                // 体温1 血糖2  血压3 脉搏4 睡眠5 运动6
+                //根据参数不同，加载对应的对象
+                case "1":
+                    new Util(xl);
+                    break;
+                case "2":
+                    new Util(xt);
+                    break;
+                case "3":
+                    new Util(xy);
+                    break;
+                case "4":
+                    new Util(mb);
+                    break;
+                case "5":
+                    new Util(sm);
+                    break;
+                case "6":
+                    new Util(yd);
+                    break;
+                default:
+                    new Util(null);
+                    break;
+            }
+        } else {
+            document.getElementById('main').innerHTML = "无数据";
+        }
+
+
+    </script>
+
+</body>
+
+</html>
